@@ -1,9 +1,10 @@
 import argparse
 import os
+import webbrowser
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-import pandas as pd
+import pandas as pd 
 import seaborn as sns
 
 
@@ -153,6 +154,79 @@ def save_charts(df: pd.DataFrame, output_dir: Path) -> None:
     generate_charts(df, charts_dir)
 
 
+def save_html_report(cleaned_df: pd.DataFrame, scorecard: pd.DataFrame, output_dir: Path) -> Path:
+    html_path = output_dir / "report.html"
+    summary = pd.DataFrame(
+        {
+            "metric": [
+                "total_rows",
+                "total_columns",
+                "duplicate_rows",
+                "missing_values_total",
+            ],
+            "value": [
+                cleaned_df.shape[0],
+                cleaned_df.shape[1],
+                cleaned_df.duplicated().sum(),
+                cleaned_df.isna().sum().sum(),
+            ],
+        }
+    )
+
+    html_content = f"""<!DOCTYPE html>
+<html lang=\"en\">
+<head>
+  <meta charset=\"utf-8\">
+  <title>Data Cleaning Report</title>
+  <style>
+    body {{ font-family: Arial, sans-serif; margin: 24px; line-height: 1.6; }}
+    h1, h2 {{ color: #2f4f4f; }}
+    table {{ border-collapse: collapse; width: 100%; margin-bottom: 24px; }}
+    th, td {{ border: 1px solid #ccc; padding: 8px; text-align: left; }}
+    th {{ background: #f2f2f2; }}
+    img {{ max-width: 100%; height: auto; margin-bottom: 24px; }}
+    .section {{ margin-bottom: 40px; }}
+  </style>
+</head>
+<body>
+  <h1>Data Cleaning & Reporting Dashboard</h1>
+  <div class=\"section\">
+    <h2>Summary Metrics</h2>
+    {summary.to_html(index=False, border=0, classes='table')}
+  </div>
+  <div class=\"section\">
+    <h2>Data Quality Scorecard</h2>
+    {scorecard.to_html(border=0, classes='table')}
+  </div>
+  <div class=\"section\">
+    <h2>Cleaned Data Sample</h2>
+    {cleaned_df.head(20).to_html(index=False, border=0, classes='table')}
+  </div>
+  <div class=\"section\">
+    <h2>Charts</h2>
+    <p><strong>Numeric distributions</strong></p>
+    <img src=\"charts/numeric_histograms.png\" alt=\"Numeric Histograms\">
+    <p><strong>Sales by Region</strong></p>
+    <img src=\"charts/sales_by_region.png\" alt=\"Sales by Region\">
+  </div>
+</body>
+</html>"""
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    html_path.write_text(html_content, encoding="utf-8")
+    print(f"Saved HTML dashboard to {html_path}")
+    return html_path
+
+
+def open_html_report(html_path: Path) -> None:
+    try:
+        absolute_path = html_path.resolve()
+        webbrowser.open_new_tab(absolute_path.as_uri())
+        print(f"Opened HTML dashboard in your default browser: {absolute_path}")
+    except Exception as exc:
+        print(f"Could not open browser automatically: {exc}")
+
+
 def run_pipeline(input_path: Path | None, output_dir: Path, generate_sample: bool = False) -> None:
     if generate_sample or input_path is None:
         df = generate_sample_data()
@@ -163,9 +237,12 @@ def run_pipeline(input_path: Path | None, output_dir: Path, generate_sample: boo
     quality_report = build_data_quality_report(cleaned)
     report_path = save_report(cleaned, quality_report, output_dir)
     save_charts(cleaned, output_dir)
+    html_path = save_html_report(cleaned, quality_report, output_dir)
+    open_html_report(html_path)
 
     print("Automation complete.")
     print(f"Report available at: {report_path}")
+    print(f"HTML dashboard available at: {html_path}")
 
 
 def parse_args() -> argparse.Namespace:

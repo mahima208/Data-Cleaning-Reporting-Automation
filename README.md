@@ -26,6 +26,7 @@ Data-Cleaning-Reporting-Automation
 - Standardize inconsistent text values
 - Generate data quality summaries and automated reports
 - Create Excel workbooks with cleaned data, summary metrics, and charts
+- Generate an HTML dashboard page with charts and data summaries
 
 ## Getting Started
 
